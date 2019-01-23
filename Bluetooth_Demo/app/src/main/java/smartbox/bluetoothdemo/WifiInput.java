@@ -1,437 +1,182 @@
 package smartbox.bluetoothdemo;
 
-import android.animation.Animator;
-import android.animation.AnimatorListenerAdapter;
-import android.annotation.TargetApi;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.util.Set;
+import java.util.UUID;
+
+import android.app.Activity;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothSocket;
-import android.content.pm.PackageManager;
-import android.os.ParcelUuid;
-import android.support.annotation.NonNull;
-import android.support.design.widget.Snackbar;
-import android.support.v7.app.AppCompatActivity;
-import android.app.LoaderManager.LoaderCallbacks;
-
-import android.content.CursorLoader;
-import android.content.Loader;
-import android.database.Cursor;
-import android.net.Uri;
-import android.os.AsyncTask;
-
-import android.os.Build;
+import android.content.Intent;
 import android.os.Bundle;
-import android.provider.ContactsContract;
-import android.text.TextUtils;
+import android.os.Handler;
 import android.util.Log;
-import android.view.KeyEvent;
+import android.view.Menu;
 import android.view.View;
-import android.view.View.OnClickListener;
-import android.view.inputmethod.EditorInfo;
-import android.widget.ArrayAdapter;
 import android.widget.AutoCompleteTextView;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.TextView;
 
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Set;
+public class WifiInput extends Activity {
 
-import static android.Manifest.permission.READ_CONTACTS;
+    BluetoothSocket mmSocket;
+    BluetoothDevice mmDevice = null;
 
-/**
- * A login screen that offers login via email/password.
- */
-public class WifiInput extends AppCompatActivity implements LoaderCallbacks<Cursor> {
-
-    /**
-     * Id to identity READ_CONTACTS permission request.
-     */
-    private static final int REQUEST_READ_CONTACTS = 0;
-
-    /**
-     * A dummy authentication store containing known user names and passwords.
-     * TODO: remove after connecting to a real authentication system.
-     */
-    private static final String[] DUMMY_CREDENTIALS = new String[]{
-            "foo@example.com:hello", "bar@example.com:world"
-    };
-    /**
-     * Keep track of the login task to ensure we can cancel it if requested.
-     */
-    private UserLoginTask mAuthTask = null;
-
-    // UI references.
-    private AutoCompleteTextView mWifiName;
-    private EditText mPasswordView;
-    private View mProgressView;
-    private View mLoginFormView;
-
+    final byte delimiter = 33;
+    int readBufferPosition = 0;
 
     BluetoothAdapter mBluetoothAdapter;
-    BluetoothSocket mmSocket;
-    BluetoothDevice mmDevice;
-    OutputStream mmOutputStream;
-    InputStream mmInputStream;
-    Thread workerThread;
-    byte[] readBuffer;
-    int readBufferPosition;
-    int counter;
-    volatile boolean stopWorker;
 
-    void sendData() throws IOException
-    {
-        if (mAuthTask != null) {
-            return;
+    private EditText mPasswordView;
+    private AutoCompleteTextView mWifiName;
+    private Button mConfirmButton;
+    private EditText mDeviceName;
+    private EditText mDeviceAddress;
+    private EditText mDeviceUID;
+    private EditText mData;
+
+    private void bluetoothInit(){
+        if(!mBluetoothAdapter.isEnabled())
+        {
+            Intent enableBluetooth = new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE);
+            startActivityForResult(enableBluetooth, 0);
         }
 
-        // Reset errors.
-        mWifiName.setError(null);
-        mPasswordView.setError(null);
+        Set<BluetoothDevice> pairedDevices = mBluetoothAdapter.getBondedDevices();
+        if(pairedDevices.size() > 0)
+        {
+            for(BluetoothDevice device : pairedDevices)
+            {
+                if(device.getName().contains("raspberry")) //Note, you will need to change this to match the name of your device
+                {
+                    mmDevice = device;
+                    mDeviceAddress.setText(device.getAddress());
+                    mDeviceName.setText(device.getName());
+                    mDeviceUID.setText("" + device.getUuids());
+                    break;
+                }
+            }
+        }
+    }
 
-        // Store values at the time of the login attempt.
-        String wifi = mWifiName.getText().toString();
-        String password = mPasswordView.getText().toString();
+    public void sendBtMsg(String msg2send){
+        //UUID uuid = UUID.fromString("00001101-0000-1000-8000-00805f9b34fb"); //Standard SerialPortService ID
+        UUID uuid = UUID.fromString("94f39d29-7d6d-437d-973b-fba39e49d4ee"); //Standard SerialPortService ID
+        try {
 
-        String msg = "ls";
-        msg += "\n";
-        mmOutputStream.write(msg.getBytes());
-        mWifiName.setText("Data Sent");
+            mmSocket = mmDevice.createRfcommSocketToServiceRecord(uuid);
+            if (!mmSocket.isConnected()){
+                mmSocket.connect();
+            }
+
+            String msg = msg2send;
+            //msg += "\n";
+            OutputStream mmOutputStream = mmSocket.getOutputStream();
+            mmOutputStream.write(msg.getBytes());
+
+        } catch (IOException e) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
+        }
+
     }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_wifi_input);
-        // Set up the login form.
-        mWifiName = (AutoCompleteTextView) findViewById(R.id.wifi);
-        populateAutoComplete();
 
-        mPasswordView = (EditText) findViewById(R.id.password);
-        mPasswordView.setOnEditorActionListener(new TextView.OnEditorActionListener() {
-            @Override
-            public boolean onEditorAction(TextView textView, int id, KeyEvent keyEvent) {
-                if (id == EditorInfo.IME_ACTION_DONE || id == EditorInfo.IME_NULL) {
-                    attemptLogin();
-                    return true;
-                }
-                return false;
+        final Handler handler = new Handler();
+
+        mPasswordView = findViewById(R.id.password);
+        mWifiName = findViewById(R.id.wifi);
+        mConfirmButton = findViewById(R.id.wifi_send_button);
+        mDeviceName = findViewById(R.id.device_name);
+        mDeviceAddress = findViewById(R.id.device_address);
+        mDeviceUID = findViewById(R.id.device_uid);
+        mData = findViewById(R.id.data);
+
+        mBluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
+        bluetoothInit();
+
+        final class workerThread implements Runnable {
+
+            private String btMsg;
+
+            public workerThread(String msg) {
+                btMsg = msg;
             }
-        });
 
-        try {
-            bluetooth_init();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
+            public void run()
+            {
+                sendBtMsg(btMsg);
+                while(!Thread.currentThread().isInterrupted())
+                {
+                    int bytesAvailable;
+                    boolean workDone = false;
+                    try {
+                        final InputStream mmInputStream;
+                        mmInputStream = mmSocket.getInputStream();
+                        bytesAvailable = mmInputStream.available();
+                        if(bytesAvailable > 0)
+                        {
+                            byte[] packetBytes = new byte[bytesAvailable];
+                            Log.e("Aquarium recv bt","bytes available");
+                            byte[] readBuffer = new byte[1024];
+                            mmInputStream.read(packetBytes);
 
-        Button mCommandSend = (Button) findViewById(R.id.wifi_send_button);
-        mCommandSend.setOnClickListener(new OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                try {
-                    write("ls");
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
-            }
-        });
+                            for(int i=0;i<bytesAvailable;i++)
+                            {
+                                byte b = packetBytes[i];
+                                if(b == delimiter)
+                                {
+                                    byte[] encodedBytes = new byte[readBufferPosition];
+                                    System.arraycopy(readBuffer, 0, encodedBytes, 0, encodedBytes.length);
+                                    final String data = new String(encodedBytes, "US-ASCII");
+                                    readBufferPosition = 0;
 
-        mProgressView = findViewById(R.id.login_progress);
-    }
+                                    //The variable data now contains our full command
+                                    handler.post(new Runnable()
+                                    {
+                                        public void run()
+                                        {
+                                            mData.setText(data);
+                                        }
+                                    });
 
-    private void bluetooth_init() throws IOException {
-        BluetoothAdapter blueAdapter = BluetoothAdapter.getDefaultAdapter();
-        if (blueAdapter != null) {
-            if (blueAdapter.isEnabled()) {
-                Set<BluetoothDevice> bondedDevices = blueAdapter.getBondedDevices();
-
-                BluetoothDevice mmDevice = null;
-
-                if(bondedDevices.size() > 0) {
-//                    Object[] devices = bondedDevices.toArray();
-                    for (BluetoothDevice device : bondedDevices) {
-                        if (device.getName().contains("raspberry")) {
-                            mmDevice = device;
-                            mWifiName.setText(device.getName());
-                            break;
+                                    workDone = true;
+                                    break;
+                                }
+                                else
+                                {
+                                    readBuffer[readBufferPosition++] = b;
+                                }
+                            }
+                            if (workDone == true){
+                                mmSocket.close();
+                                break;
+                            }
                         }
-                    }
-                    if (mmDevice != null) {
-                        ParcelUuid[] uuids = mmDevice.getUuids();
-                        BluetoothSocket socket = mmDevice.createRfcommSocketToServiceRecord(uuids[0].getUuid());
-                        socket.connect();
-                        mmOutputStream = socket.getOutputStream();
-                        mmInputStream = socket.getInputStream();
+                    } catch (IOException e) {
+                        // TODO Auto-generated catch block
+                        e.printStackTrace();
                     }
                 }
-
-                mWifiName.setText("error No appropriate paired devices.");
-            } else {
-                mWifiName.setText("error Bluetooth is disabled.");
             }
-        }
-    }
-
-    public void write(String s) throws IOException {
-        mmOutputStream.write(s.getBytes());
-    }
-
-    private void populateAutoComplete() {
-        if (!mayRequestContacts()) {
-            return;
-        }
-
-        getLoaderManager().initLoader(0, null, this);
-    }
-
-    private boolean mayRequestContacts() {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) {
-            return true;
-        }
-        if (checkSelfPermission(READ_CONTACTS) == PackageManager.PERMISSION_GRANTED) {
-            return true;
-        }
-        if (shouldShowRequestPermissionRationale(READ_CONTACTS)) {
-            Snackbar.make(mWifiName, R.string.permission_rationale, Snackbar.LENGTH_INDEFINITE)
-                    .setAction(android.R.string.ok, new View.OnClickListener() {
-                        @Override
-                        @TargetApi(Build.VERSION_CODES.M)
-                        public void onClick(View v) {
-                            requestPermissions(new String[]{READ_CONTACTS}, REQUEST_READ_CONTACTS);
-                        }
-                    });
-        } else {
-            requestPermissions(new String[]{READ_CONTACTS}, REQUEST_READ_CONTACTS);
-        }
-        return false;
-    }
-
-    /**
-     * Callback received when a permissions request has been completed.
-     */
-    @Override
-    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions,
-                                           @NonNull int[] grantResults) {
-        if (requestCode == REQUEST_READ_CONTACTS) {
-            if (grantResults.length == 1 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                populateAutoComplete();
-            }
-        }
-    }
-
-
-    /**
-     * Attempts to sign in or register the account specified by the login form.
-     * If there are form errors (invalid email, missing fields, etc.), the
-     * errors are presented and no actual login attempt is made.
-     */
-    private void attemptLogin() {
-        if (mAuthTask != null) {
-            return;
-        }
-
-        // Reset errors.
-        mWifiName.setError(null);
-        mPasswordView.setError(null);
-
-        // Store values at the time of the login attempt.
-        String wifi = mWifiName.getText().toString();
-        String password = mPasswordView.getText().toString();
-
-        boolean cancel = false;
-        View focusView = null;
-
-        // Check for a valid password, if the user entered one.
-        if (!TextUtils.isEmpty(password) && !isPasswordValid(password)) {
-            mPasswordView.setError(getString(R.string.error_invalid_password));
-            focusView = mPasswordView;
-            cancel = true;
-        }
-
-        // Check for a valid email address.
-        if (TextUtils.isEmpty(wifi)) {
-            mWifiName.setError(getString(R.string.error_field_required));
-            focusView = mWifiName;
-            cancel = true;
-        } else if (!isWifiValid(wifi)) {
-            mWifiName.setError(getString(R.string.error_invalid_email));
-            focusView = mWifiName;
-            cancel = true;
-        }
-
-        if (cancel) {
-            // There was an error; don't attempt login and focus the first
-            // form field with an error.
-            focusView.requestFocus();
-        } else {
-            // Show a progress spinner, and kick off a background task to
-            // perform the user login attempt.
-            showProgress(true);
-            mAuthTask = new UserLoginTask(wifi, password);
-            mAuthTask.execute((Void) null);
-        }
-    }
-
-    private boolean isWifiValid(String wifi) {
-        //TODO: Replace this with your own logic
-        return true;
-    }
-
-    private boolean isPasswordValid(String password) {
-        //TODO: Replace this with your own logic
-        return password.length() > 4;
-    }
-
-    /**
-     * Shows the progress UI and hides the login form.
-     */
-    @TargetApi(Build.VERSION_CODES.HONEYCOMB_MR2)
-    private void showProgress(final boolean show) {
-        // On Honeycomb MR2 we have the ViewPropertyAnimator APIs, which allow
-        // for very easy animations. If available, use these APIs to fade-in
-        // the progress spinner.
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.HONEYCOMB_MR2) {
-            int shortAnimTime = getResources().getInteger(android.R.integer.config_shortAnimTime);
-
-            mLoginFormView.setVisibility(show ? View.GONE : View.VISIBLE);
-            mLoginFormView.animate().setDuration(shortAnimTime).alpha(
-                    show ? 0 : 1).setListener(new AnimatorListenerAdapter() {
-                @Override
-                public void onAnimationEnd(Animator animation) {
-                    mLoginFormView.setVisibility(show ? View.GONE : View.VISIBLE);
-                }
-            });
-
-            mProgressView.setVisibility(show ? View.VISIBLE : View.GONE);
-            mProgressView.animate().setDuration(shortAnimTime).alpha(
-                    show ? 1 : 0).setListener(new AnimatorListenerAdapter() {
-                @Override
-                public void onAnimationEnd(Animator animation) {
-                    mProgressView.setVisibility(show ? View.VISIBLE : View.GONE);
-                }
-            });
-        } else {
-            // The ViewPropertyAnimator APIs are not available, so simply show
-            // and hide the relevant UI components.
-            mProgressView.setVisibility(show ? View.VISIBLE : View.GONE);
-            mLoginFormView.setVisibility(show ? View.GONE : View.VISIBLE);
-        }
-    }
-
-    @Override
-    public Loader<Cursor> onCreateLoader(int i, Bundle bundle) {
-        return new CursorLoader(this,
-                // Retrieve data rows for the device user's 'profile' contact.
-                Uri.withAppendedPath(ContactsContract.Profile.CONTENT_URI,
-                        ContactsContract.Contacts.Data.CONTENT_DIRECTORY), ProfileQuery.PROJECTION,
-
-                // Select only email addresses.
-                ContactsContract.Contacts.Data.MIMETYPE +
-                        " = ?", new String[]{ContactsContract.CommonDataKinds.Email
-                .CONTENT_ITEM_TYPE},
-
-                // Show primary email addresses first. Note that there won't be
-                // a primary email address if the user hasn't specified one.
-                ContactsContract.Contacts.Data.IS_PRIMARY + " DESC");
-    }
-
-    @Override
-    public void onLoadFinished(Loader<Cursor> cursorLoader, Cursor cursor) {
-        List<String> emails = new ArrayList<>();
-        cursor.moveToFirst();
-        while (!cursor.isAfterLast()) {
-            emails.add(cursor.getString(ProfileQuery.ADDRESS));
-            cursor.moveToNext();
-        }
-
-        addEmailsToAutoComplete(emails);
-    }
-
-    @Override
-    public void onLoaderReset(Loader<Cursor> cursorLoader) {
-
-    }
-
-    private void addEmailsToAutoComplete(List<String> emailAddressCollection) {
-        //Create adapter to tell the AutoCompleteTextView what to show in its dropdown list.
-        ArrayAdapter<String> adapter =
-                new ArrayAdapter<>(WifiInput.this,
-                        android.R.layout.simple_dropdown_item_1line, emailAddressCollection);
-
-        mWifiName.setAdapter(adapter);
-    }
-
-
-    private interface ProfileQuery {
-        String[] PROJECTION = {
-                ContactsContract.CommonDataKinds.Email.ADDRESS,
-                ContactsContract.CommonDataKinds.Email.IS_PRIMARY,
         };
 
-        int ADDRESS = 0;
-        int IS_PRIMARY = 1;
+        // start temp button handler
+
+        mConfirmButton.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                // Perform action on temp button click
+                (new Thread(new workerThread("temp"))).start();
+            }
+        });
     }
 
-    /**
-     * Represents an asynchronous login/registration task used to authenticate
-     * the user.
-     */
-    public class UserLoginTask extends AsyncTask<Void, Void, Boolean> {
-
-        private final String mEmail;
-        private final String mPassword;
-
-        UserLoginTask(String email, String password) {
-            mEmail = email;
-            mPassword = password;
-        }
-
-        @Override
-        protected Boolean doInBackground(Void... params) {
-            // TODO: attempt authentication against a network service.
-
-            try {
-                // Simulate network access.
-                Thread.sleep(2000);
-            } catch (InterruptedException e) {
-                return false;
-            }
-
-            for (String credential : DUMMY_CREDENTIALS) {
-                String[] pieces = credential.split(":");
-                if (pieces[0].equals(mEmail)) {
-                    // Account exists, return true if the password matches.
-                    return pieces[1].equals(mPassword);
-                }
-            }
-
-            // TODO: register the new account here.
-            return true;
-        }
-
-        @Override
-        protected void onPostExecute(final Boolean success) {
-            mAuthTask = null;
-            showProgress(false);
-
-            if (success) {
-                finish();
-            } else {
-                mPasswordView.setError(getString(R.string.error_incorrect_password));
-                mPasswordView.requestFocus();
-            }
-        }
-
-        @Override
-        protected void onCancelled() {
-            mAuthTask = null;
-            showProgress(false);
-        }
-    }
 }
-

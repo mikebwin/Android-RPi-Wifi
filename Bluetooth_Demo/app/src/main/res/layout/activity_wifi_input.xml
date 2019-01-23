@@ -22,7 +22,7 @@
     <ScrollView
         android:id="@+id/login_form"
         android:layout_width="match_parent"
-        android:layout_height="match_parent">
+        android:layout_height="215dp">
 
         <LinearLayout
             android:id="@+id/email_login_form"
@@ -74,4 +74,36 @@
 
         </LinearLayout>
     </ScrollView>
+
+    <EditText
+        android:id="@+id/device_name"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:ems="10"
+        android:inputType="textPersonName"
+        android:text="Name of Device" />
+
+    <EditText
+        android:id="@+id/device_address"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:ems="10"
+        android:inputType="textPersonName"
+        android:text="Address of Device" />
+
+    <EditText
+        android:id="@+id/device_uid"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:ems="10"
+        android:inputType="textPersonName"
+        android:text="Device UID" />
+
+    <EditText
+        android:id="@+id/data"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:ems="10"
+        android:inputType="textPersonName"
+        android:text="data" />
 </LinearLayout>
