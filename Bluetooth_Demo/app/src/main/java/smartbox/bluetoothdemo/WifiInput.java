@@ -13,13 +13,12 @@ import android.bluetooth.BluetoothSocket;
 import android.content.Intent;
 import android.os.Bundle;
 import android.os.Handler;
+import android.os.ParcelUuid;
 import android.util.Log;
-import android.view.Menu;
 import android.view.View;
 import android.widget.AutoCompleteTextView;
 import android.widget.Button;
 import android.widget.EditText;
-import android.widget.TextView;
 
 public class WifiInput extends Activity {
 
@@ -29,7 +28,7 @@ public class WifiInput extends Activity {
     final byte delimiter = 33;
     int readBufferPosition = 0;
 
-    BluetoothAdapter mBluetoothAdapter;
+    private BluetoothAdapter mBluetoothAdapter;
 
     private EditText mPasswordView;
     private AutoCompleteTextView mWifiName;
@@ -38,8 +37,14 @@ public class WifiInput extends Activity {
     private EditText mDeviceAddress;
     private EditText mDeviceUID;
     private EditText mData;
+    private EditText mErrorText;
+
+    private UUID uuid;
 
     private void bluetoothInit(){
+
+        mBluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
+
         if(!mBluetoothAdapter.isEnabled())
         {
             Intent enableBluetooth = new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE);
@@ -51,36 +56,43 @@ public class WifiInput extends Activity {
         {
             for(BluetoothDevice device : pairedDevices)
             {
-                if(device.getName().contains("raspberry")) //Note, you will need to change this to match the name of your device
+                if(device.getName().contains("smartbox")) //Note, you will need to change this to match the name of your device
                 {
                     mmDevice = device;
                     mDeviceAddress.setText(device.getAddress());
                     mDeviceName.setText(device.getName());
-                    mDeviceUID.setText("" + device.getUuids());
+
+                    try {
+                        ParcelUuid[] uuids = mmDevice.getUuids();
+                        mmSocket = mmDevice.createRfcommSocketToServiceRecord(uuids[0].getUuid());
+                        uuid = uuids[0].getUuid();
+                        mDeviceUID.setText("" + uuid);
+                    } catch (IOException e) {
+                        mErrorText.setText("error with fetching UID");
+                    }
                     break;
                 }
             }
         }
     }
 
-    public void sendBtMsg(String msg2send){
-        //UUID uuid = UUID.fromString("00001101-0000-1000-8000-00805f9b34fb"); //Standard SerialPortService ID
-        UUID uuid = UUID.fromString("94f39d29-7d6d-437d-973b-fba39e49d4ee"); //Standard SerialPortService ID
+    public void sendBluetoothMessage(String messangeToSend){
+//        UUID uuid = UUID.fromString("94f39d29-7d6d-437d-973b-fba39e49d4ee"); //Standard SerialPortService ID
+        mErrorText.setText("trying to send message: " + messangeToSend);
         try {
-
             mmSocket = mmDevice.createRfcommSocketToServiceRecord(uuid);
             if (!mmSocket.isConnected()){
                 mmSocket.connect();
             }
 
-            String msg = msg2send;
+            String msg = messangeToSend;
             //msg += "\n";
             OutputStream mmOutputStream = mmSocket.getOutputStream();
             mmOutputStream.write(msg.getBytes());
 
         } catch (IOException e) {
             // TODO Auto-generated catch block
-            e.printStackTrace();
+            mErrorText.setText("socket connection error");
         }
 
     }
@@ -99,8 +111,8 @@ public class WifiInput extends Activity {
         mDeviceAddress = findViewById(R.id.device_address);
         mDeviceUID = findViewById(R.id.device_uid);
         mData = findViewById(R.id.data);
+        mErrorText = findViewById(R.id.error_text);
 
-        mBluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
         bluetoothInit();
 
         final class workerThread implements Runnable {
@@ -113,7 +125,7 @@ public class WifiInput extends Activity {
 
             public void run()
             {
-                sendBtMsg(btMsg);
+                sendBluetoothMessage(btMsg);
                 while(!Thread.currentThread().isInterrupted())
                 {
                     int bytesAvailable;
@@ -163,7 +175,7 @@ public class WifiInput extends Activity {
                         }
                     } catch (IOException e) {
                         // TODO Auto-generated catch block
-                        e.printStackTrace();
+                        mErrorText.setText("Thread Issue");
                     }
                 }
             }
@@ -177,6 +189,12 @@ public class WifiInput extends Activity {
                 (new Thread(new workerThread("temp"))).start();
             }
         });
+
+        if(!mBluetoothAdapter.isEnabled())
+        {
+            Intent enableBluetooth = new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE);
+            startActivityForResult(enableBluetooth, 0);
+        }
     }
 
 }
