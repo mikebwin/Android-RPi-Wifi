@@ -100,14 +100,6 @@
         android:text="Device UID" />
 
     <EditText
-        android:id="@+id/data"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:ems="10"
-        android:inputType="textPersonName"
-        android:text="data" />
-
-    <EditText
         android:id="@+id/error_text"
         android:layout_width="match_parent"
         android:layout_height="150dp"

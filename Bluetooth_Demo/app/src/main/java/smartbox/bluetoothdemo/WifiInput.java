@@ -104,9 +104,31 @@ public class WifiInput extends Activity {
         }
     }
 
-    public void sendBluetoothMessage(String messangeToSend) {
+    public String receiveData(BluetoothSocket socket) throws IOException{
+        InputStream socketInputStream =  socket.getInputStream();
+        byte[] buffer = new byte[256];
+        int bytes;
+        String readMessage = "stuff";
+
+        // Keep looping to listen for received messages
+        while (true) {
+            try {
+                bytes = socketInputStream.read(buffer);            //read bytes from input buffer
+                readMessage = new String(buffer, 0, bytes);
+                System.out.println("read message: " + readMessage);
+                return readMessage;
+            } catch (IOException e) {
+                break;
+            }
+        }
+
+        return readMessage;
+    }
+
+    public String sendBluetoothMessage(String messangeToSend, EditText textField) {
 //        UUID uuid = UUID.fromString("94f39d29-7d6d-437d-973b-fba39e49d4ee"); //Standard SerialPortService ID
 //        mErrorText.setText("trying to send message: " + messangeToSend);
+
         try {
 //            mmSocket = mmDevice.createRfcommSocketToServiceRecord(uuid);
             if (!mmSocket.isConnected()){
@@ -118,6 +140,7 @@ public class WifiInput extends Activity {
             try {
                 OutputStream mmOutputStream = mmSocket.getOutputStream();
                 mmOutputStream.write(msg.getBytes());
+                return receiveData(mmSocket);
             } catch (IOException ioEx) {
                 mErrorText.setText("output stream issue");
             }
@@ -126,6 +149,8 @@ public class WifiInput extends Activity {
             // TODO Auto-generated catch block
             mErrorText.setText("socket connection error");
         }
+
+        return "no message received";
 
     }
 
@@ -142,7 +167,6 @@ public class WifiInput extends Activity {
         mDeviceName = findViewById(R.id.device_name);
         mDeviceAddress = findViewById(R.id.device_address);
         mDeviceUID = findViewById(R.id.device_uid);
-        mData = findViewById(R.id.data);
         mErrorText = findViewById(R.id.error_text);
 
         bluetoothInit();
@@ -157,7 +181,7 @@ public class WifiInput extends Activity {
 
             public void run()
             {
-                sendBluetoothMessage(btMsg);
+                mErrorText.setText(sendBluetoothMessage(btMsg, mData));
                 while(!Thread.currentThread().isInterrupted())
                 {
                     int bytesAvailable;
@@ -187,7 +211,7 @@ public class WifiInput extends Activity {
                                     {
                                         public void run()
                                         {
-                                            mData.setText(data);
+                                            mErrorText.setText(data);
                                         }
                                     });
 
@@ -217,7 +241,10 @@ public class WifiInput extends Activity {
         mConfirmButton.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
                 // Perform action on temp button click
-                (new Thread(new workerThread("ls -l"))).start();
+                String wifi_name = mWifiName.getText().toString();
+                String wifi_pass = mPasswordView.getText().toString();
+
+                (new Thread(new workerThread(wifi_name + wifi_pass))).start();
             }
         });
 
