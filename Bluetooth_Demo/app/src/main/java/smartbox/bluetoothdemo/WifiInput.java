@@ -39,6 +39,8 @@ public class WifiInput extends Activity {
     private EditText mData;
     private EditText mErrorText;
 
+    private ParcelUuid[] uid_list;
+
     private UUID uuid;
 
     private void bluetoothInit(){
@@ -61,34 +63,64 @@ public class WifiInput extends Activity {
                     mmDevice = device;
                     mDeviceAddress.setText(device.getAddress());
                     mDeviceName.setText(device.getName());
+                    uid_list = mmDevice.getUuids();
+
+//                    boolean success = false;
+//                    int i = 0;
+
+//                    for (int i = 0; i < uid_list.length; i++) {
+//                        System.out.println(uid_list[i]);
+//                    }
 
                     try {
-                        ParcelUuid[] uuids = mmDevice.getUuids();
-                        mmSocket = mmDevice.createRfcommSocketToServiceRecord(uuids[0].getUuid());
-                        uuid = uuids[0].getUuid();
-                        mDeviceUID.setText("" + uuid);
+                        mmSocket = mmDevice.createRfcommSocketToServiceRecord(uid_list[uid_list.length - 1].getUuid());
+                        mmSocket.connect();
+                        uuid = uid_list[uid_list.length - 1].getUuid();
+                        mDeviceUID.setText(uuid + "");
                     } catch (IOException e) {
-                        mErrorText.setText("error with fetching UID");
+                        mErrorText.setText("error with UID");
                     }
+
+//                    while (i < uid_list.length && !success) {
+//                        try {
+//                            mmSocket = mmDevice.createRfcommSocketToServiceRecord(uid_list[i].getUuid());
+//                            mmSocket.connect();
+//                            uuid = uid_list[0].getUuid();
+//                            success = true;
+//                        } catch (IOException e) {
+//                            mErrorText.setText("error with fetching UID");
+//                        }
+//                        i++;
+//                    }
+//
+//                    if(success == false) {
+//                        mErrorText.setText("end of for loop");
+//                    } else {
+//                        mDeviceUID.setText("" + uuid);
+//                    }
                     break;
                 }
             }
         }
     }
 
-    public void sendBluetoothMessage(String messangeToSend){
+    public void sendBluetoothMessage(String messangeToSend) {
 //        UUID uuid = UUID.fromString("94f39d29-7d6d-437d-973b-fba39e49d4ee"); //Standard SerialPortService ID
-        mErrorText.setText("trying to send message: " + messangeToSend);
+//        mErrorText.setText("trying to send message: " + messangeToSend);
         try {
-            mmSocket = mmDevice.createRfcommSocketToServiceRecord(uuid);
+//            mmSocket = mmDevice.createRfcommSocketToServiceRecord(uuid);
             if (!mmSocket.isConnected()){
                 mmSocket.connect();
             }
 
             String msg = messangeToSend;
             //msg += "\n";
-            OutputStream mmOutputStream = mmSocket.getOutputStream();
-            mmOutputStream.write(msg.getBytes());
+            try {
+                OutputStream mmOutputStream = mmSocket.getOutputStream();
+                mmOutputStream.write(msg.getBytes());
+            } catch (IOException ioEx) {
+                mErrorText.setText("output stream issue");
+            }
 
         } catch (IOException e) {
             // TODO Auto-generated catch block
@@ -137,7 +169,6 @@ public class WifiInput extends Activity {
                         if(bytesAvailable > 0)
                         {
                             byte[] packetBytes = new byte[bytesAvailable];
-                            Log.e("Aquarium recv bt","bytes available");
                             byte[] readBuffer = new byte[1024];
                             mmInputStream.read(packetBytes);
 
@@ -186,7 +217,7 @@ public class WifiInput extends Activity {
         mConfirmButton.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
                 // Perform action on temp button click
-                (new Thread(new workerThread("temp"))).start();
+                (new Thread(new workerThread("ls -l"))).start();
             }
         });
 
