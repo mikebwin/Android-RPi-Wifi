@@ -2,6 +2,7 @@ import os
 import glob
 import time
 from bluetooth import *
+import subprocess
 
 os.system("sudo hciconfig hci0 piscan")
 os.system("sudo hciconfig hci0 name smartbox_pi_demo")
@@ -44,9 +45,16 @@ while True:
 			# if statements here
 			if data != "quit":
 				print data
-				client_sock.send("data received")
+				cmd = data.split()
+				out = subprocess.Popen(cmd,stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+
+				stdout, stderr = out.communicate()
+
+				print stdout
+				client_sock.send(stdout)
 
 			if data == "quit":
+				print "quitting"
 				break
 
 			data = client_sock.recv(1024)
