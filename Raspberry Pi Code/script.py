@@ -48,7 +48,38 @@ while True:
 				cmd = data.split()
 				out = subprocess.Popen(cmd,stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
 
+
+                                if data == "sudo iwlist wlan0 scanning":
+                                    print "WIFI LIST"
+                                    out = subprocess.Popen(['grep', '-E', "SSID|Authentication"], stdin=out.stdout, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+
 				stdout, stderr = out.communicate()
+
+                                if data == "sudo iwlist wlan0 scanning":
+                                    stdout = stdout.replace("ESSID:", "E:")
+                                    stdout = stdout.replace("\"", "")
+                                    stdout = stdout.replace("Authentication Suites (1) :", "A:")
+                                    stdout = stdout.replace(" ", "")
+                                    str_list = stdout.split("\n")
+                                    str_dict = dict()
+                                    index = 0
+                                    while index < len(str_list):
+                                        another = str_list[index]
+                                        if len(another) < 1 or another is None:
+                                            index += 1
+                                            continue
+                                        if index + 1 < len(str_list) and "A:" in str_list[index+1]:
+                                            authen = str_list[index+1]
+                                            str_dict.update({another:authen}) 
+                                            index += 1
+                                        else:
+                                            str_dict.update({another:"None"})
+                                        index += 1
+                                    stdout = ""
+                                    for key, value in str_dict.iteritems():
+                                        stdout = stdout + "\n" + key + "\n" + value
+                                        
+
 
 				print stdout
 				client_sock.send(stdout)
