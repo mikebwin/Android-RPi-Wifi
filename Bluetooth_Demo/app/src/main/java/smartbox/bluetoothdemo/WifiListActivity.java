@@ -28,8 +28,8 @@ public class WifiListActivity extends Activity{
 
     private Button mButton;
     private RecyclerView mRecyclerView;
-    private BluetoothDevice mDevice;
-    private BluetoothSocket mmSocket;
+//    private BluetoothDevice mDevice;
+//    private BluetoothSocket mmSocket;
 
     private AtomicReference wifiString;
     private String[] wifi_list;
@@ -37,6 +37,8 @@ public class WifiListActivity extends Activity{
 
     final byte delimiter = 33;
     int readBufferPosition = 0;
+
+    BluetoothSingleton single = new BluetoothSingleton();
 
     private String receiveData(BluetoothSocket socket) throws IOException{
         InputStream socketInputStream =  socket.getInputStream();
@@ -65,16 +67,16 @@ public class WifiListActivity extends Activity{
 
         try {
 //            mSocket = mmDevice.createRfcommSocketToServiceRecord(uuid);
-            if (!mmSocket.isConnected()){
-                mmSocket.connect();
+            if (!single.getSocket().isConnected()){
+                single.getSocket().connect();
             }
 
             String msg = messangeToSend;
             //msg += "\n";
             try {
-                OutputStream mmOutputStream = mmSocket.getOutputStream();
+                OutputStream mmOutputStream = single.getSocket().getOutputStream();
                 mmOutputStream.write(msg.getBytes());
-                return receiveData(mmSocket);
+                return receiveData(single.getSocket());
             } catch (IOException ioEx) {
             }
 
@@ -99,15 +101,15 @@ public class WifiListActivity extends Activity{
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
-        Bundle b = this.getIntent().getExtras();
-        if (b != null)
-            mDevice = b.getParcelable("bluetooth_device");
-
-        try {
-            mmSocket = mDevice.createRfcommSocketToServiceRecord(mDevice.getUuids()[mDevice.getUuids().length - 1].getUuid());
-        } catch (IOException e) {
-            System.out.println("socket issue");
-        }
+//        Bundle b = this.getIntent().getExtras();
+//        if (b != null)
+//            mDevice = b.getParcelable("bluetooth_device");
+//
+//        try {
+//            mmSocket = mDevice.createRfcommSocketToServiceRecord(mDevice.getUuids()[mDevice.getUuids().length - 1].getUuid());
+//        } catch (IOException e) {
+//            System.out.println("socket issue");
+//        }
 
         setContentView(R.layout.activity_wifi_list);
 
@@ -136,7 +138,7 @@ public class WifiListActivity extends Activity{
                     boolean workDone = false;
                     try {
                         final InputStream mmInputStream;
-                        mmInputStream = mmSocket.getInputStream();
+                        mmInputStream = single.getSocket().getInputStream();
                         bytesAvailable = mmInputStream.available();
 
                         if(bytesAvailable > 0)
@@ -212,8 +214,9 @@ public class WifiListActivity extends Activity{
                 security_list = new String[wifi_names.size()];
                 int i = 0;
                 for (String name : wifi_names) {
-                    wifi_list[i++] = name;
-                    security_list[i++] = wifi_map.get(name);
+                    wifi_list[i] = name;
+                    security_list[i] = wifi_map.get(name);
+                    i++;
                 }
                 loadWifiNames(wifi_list);
             }
@@ -230,13 +233,13 @@ public class WifiListActivity extends Activity{
                             myIntent.putExtra("wifi_name", wifi_name);
                             myIntent.putExtra("security", security);
 
-                            Bundle b = new Bundle();
-                            b.putParcelable("bluetooth_device", mDevice);
-                            myIntent.putExtras(b);
+//                            Bundle b = new Bundle();
+//                            b.putParcelable("bluetooth_device", mDevice);
+//                            myIntent.putExtras(b);
 
                             //had to close socket for it to work after passed through
                             //though maybe a one time use global class thingy might be better for all bluetooth stuff
-                            try {mmSocket.close();} catch (IOException e) {e.printStackTrace();}
+//                            try {mmSocket.close();} catch (IOException e) {e.printStackTrace();}
 
                             startActivity(myIntent);
                         }

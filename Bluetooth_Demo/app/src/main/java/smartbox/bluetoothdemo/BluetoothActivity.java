@@ -49,20 +49,18 @@ public class BluetoothActivity extends Activity{
         }
     }
 
+    BluetoothSingleton single = new BluetoothSingleton();
+
     private Button mButton;
     private RecyclerView mRecyclerView;
     private ProgressBar mProgressBar;
 
-    private BluetoothSocket mmSocket;
-    private BluetoothAdapter mBluetoothAdapter;
     private Set<BluetoothDevice> devices;
     private BluetoothDevice[] devicesArray;
 
     // initializes and turns on BT
     private void btInit() {
-        mBluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
-
-        if(!mBluetoothAdapter.isEnabled())
+        if(!single.getAdapter().isEnabled())
         {
             Intent enableBluetooth = new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE);
             startActivityForResult(enableBluetooth, 0);
@@ -70,7 +68,7 @@ public class BluetoothActivity extends Activity{
     }
 
     private void loadBTNames() {
-        devices = mBluetoothAdapter.getBondedDevices();
+        devices = single.getAdapter().getBondedDevices();
 
         String[] device_names = new String[devices.size()];
         devicesArray = new BluetoothDevice[devices.size()];
@@ -100,8 +98,8 @@ public class BluetoothActivity extends Activity{
 //        progress.show();
 
         try {
-            mmSocket = mmDevice.createRfcommSocketToServiceRecord(uid_list[uid_list.length - 1].getUuid());
-            mmSocket.connect();
+            single.setmSocket(mmDevice.createRfcommSocketToServiceRecord(uid_list[uid_list.length - 1].getUuid()));
+            single.getSocket().connect();
         } catch (IOException e) {
             Toast.makeText(BluetoothActivity.this, "Bluetooth connection failed", Toast.LENGTH_LONG).show();
             return false;
@@ -139,6 +137,8 @@ public class BluetoothActivity extends Activity{
         mRecyclerView = findViewById(R.id.bt_list);
         mProgressBar = findViewById(R.id.progressBar);
 
+        single.setmAdapter(BluetoothAdapter.getDefaultAdapter());
+
         btInit();
 
         mButton.setOnClickListener(new View.OnClickListener(){
@@ -154,23 +154,21 @@ public class BluetoothActivity extends Activity{
                     @Override public void onItemClick(View view, int position) {
 
                         BluetoothDevice item = devicesArray[position];
+                        single.setmDevice(item);
 
                         System.out.println(item.getName());
 
                         if(connectBT(item)) {
                             Intent myIntent = new Intent(BluetoothActivity.this,
                                     WifiListActivity.class);
-                            Bundle b = new Bundle();
 
                             //had to close socket for it to work after passed through
                             //though maybe a one time use global class thingy might be better for all bluetooth stuff
-                            try {
-                                mmSocket.close();
-                            } catch (IOException e) {
-                                e.printStackTrace();
-                            }
-                            b.putParcelable("bluetooth_device", item);
-                            myIntent.putExtras(b);
+//                            try {
+//                                mmSocket.close();
+//                            } catch (IOException e) {
+//                                e.printStackTrace();
+//                            }
                             startActivity(myIntent);
                         } else {
                         }

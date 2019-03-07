@@ -34,11 +34,8 @@ public class WifiInput extends Activity {
     private EditText mPasswordView;
     private AutoCompleteTextView mWifiName;
     private Button mConfirmButton;
-    private Spinner eapSpinner;
-    private Spinner phase2Spinner;
-    private Spinner certSpinner;
-    private EditText mIdentity;
-    private EditText mAnonID;
+
+    private String wifi_name;
 
     private ParcelUuid[] uid_list;
 
@@ -133,7 +130,7 @@ public class WifiInput extends Activity {
         if (b != null)
             mDevice = b.getParcelable("bluetooth_device");
 
-        String wifi_name = (String) getIntent().getSerializableExtra("wifi_name");
+        wifi_name = (String) getIntent().getSerializableExtra("wifi_name");
         String security = (String) getIntent().getSerializableExtra("security");
 
         try {
@@ -150,44 +147,10 @@ public class WifiInput extends Activity {
         mWifiName = findViewById(R.id.wifi);
         mConfirmButton = findViewById(R.id.wifi_send_button);
 
-        eapSpinner = findViewById(R.id.eap);
-        phase2Spinner = findViewById(R.id.phase2);
-        certSpinner = findViewById(R.id.ca_cert);
-
-        mIdentity = findViewById(R.id.identity);
-        mAnonID = findViewById(R.id.anonymous_id);
-
-        getActionBar().setTitle(wifi_name);
+        setTitle(wifi_name);
 
         if (security.equals("None")) {
             mPasswordView.setVisibility(View.GONE);
-        } else if (security.contains("802.1x") || security.contains("EAP")) {
-            eapSpinner.setVisibility(View.VISIBLE);
-            phase2Spinner.setVisibility(View.VISIBLE);
-            certSpinner.setVisibility(View.VISIBLE);
-            mIdentity.setVisibility(View.VISIBLE);
-            mAnonID.setVisibility(View.VISIBLE);
-
-            ArrayAdapter<CharSequence> eapAdapter = ArrayAdapter.createFromResource(this,
-                    R.array.eap_array, android.R.layout.simple_spinner_item);
-            // Specify the layout to use when the list of choices appears
-            eapAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
-            // Apply the adapter to the spinner
-            eapSpinner.setAdapter(eapAdapter);
-
-            ArrayAdapter<CharSequence> p2Adapter = ArrayAdapter.createFromResource(this,
-                    R.array.phase2_authentication, android.R.layout.simple_spinner_item);
-            // Specify the layout to use when the list of choices appears
-            p2Adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
-            // Apply the adapter to the spinner
-            phase2Spinner.setAdapter(p2Adapter);
-
-            ArrayAdapter<CharSequence> certAdapter = ArrayAdapter.createFromResource(this,
-                    R.array.CA_certificate, android.R.layout.simple_spinner_item);
-            // Specify the layout to use when the list of choices appears
-            certAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
-            // Apply the adapter to the spinner
-            certSpinner.setAdapter(certAdapter);
         }
 
         final class workerThread implements Runnable {
@@ -257,18 +220,21 @@ public class WifiInput extends Activity {
         mConfirmButton.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
                 // Perform action on temp button click
-                String wifi_name = mWifiName.getText().toString();
                 String wifi_pass = mPasswordView.getText().toString();
 
-                (new Thread(new workerThread(wifi_name + wifi_pass))).start();
+                (new Thread(new workerThread("iwconfig wlan0 essid " + wifi_name + " key s:" + wifi_pass))).start();
             }
         });
 
-        if(!mBluetoothAdapter.isEnabled())
-        {
-            Intent enableBluetooth = new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE);
-            startActivityForResult(enableBluetooth, 0);
+        if (security.equals("None")) {
+            (new Thread(new workerThread("iwconfig wlan0 essid " + wifi_name))).start();
         }
+
+//        if(!mBluetoothAdapter.isEnabled())
+//        {
+//            Intent enableBluetooth = new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE);
+//            startActivityForResult(enableBluetooth, 0);
+//        }
     }
 
 }

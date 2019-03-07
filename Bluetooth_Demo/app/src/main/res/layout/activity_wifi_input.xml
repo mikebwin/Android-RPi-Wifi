@@ -45,62 +45,6 @@
 
             </android.support.design.widget.TextInputLayout>
 
-            <Spinner
-                android:id="@+id/eap"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:visibility="gone"/>
-
-            <Spinner
-                android:id="@+id/phase2"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:visibility="gone"/>
-
-            <Spinner
-                android:id="@+id/ca_cert"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:visibility="gone"/>
-
-            <android.support.design.widget.TextInputLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content">
-
-                <EditText
-                    android:id="@+id/identity"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:imeActionId="6"
-                    android:imeActionLabel="@string/action_sign_in_short"
-                    android:imeOptions="actionUnspecified"
-                    android:hint="Identity"
-                    android:inputType="textPassword"
-                    android:maxLines="1"
-                    android:singleLine="true"
-                    android:visibility="gone"/>
-
-            </android.support.design.widget.TextInputLayout>
-
-            <android.support.design.widget.TextInputLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content">
-
-                <EditText
-                    android:id="@+id/anonymous_id"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:imeActionId="6"
-                    android:imeActionLabel="@string/action_sign_in_short"
-                    android:hint="Anonymous identity"
-                    android:imeOptions="actionUnspecified"
-                    android:inputType="textPassword"
-                    android:maxLines="1"
-                    android:singleLine="true"
-                    android:visibility="gone"/>
-
-            </android.support.design.widget.TextInputLayout>
-
             <android.support.design.widget.TextInputLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content">
