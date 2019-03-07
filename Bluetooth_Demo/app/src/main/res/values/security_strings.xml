@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string-array name="eap_array">
+        <item>PEAP</item>
+        <item>TLS</item>
+        <item>TTLS</item>
+        <item>PWD</item>
+        <item>SIM</item>
+        <item>AKA</item>
+        <item>AKA'</item>
+    </string-array>
+
+    <string-array name="phase2_authentication">
+        <item>None</item>
+        <item>MSCHAPv2</item>
+        <item>GTC</item>
+        <item>SIM</item>
+        <item>AKA</item>
+        <item>AKA'</item>
+    </string-array>
+
+    <string-array name="CA_certificate">
+        <item>(unspecified)</item>
+        <item>Use system certificates</item>
+        <item>Do not validate</item>
+    </string-array>
+
+</resources>
+
+

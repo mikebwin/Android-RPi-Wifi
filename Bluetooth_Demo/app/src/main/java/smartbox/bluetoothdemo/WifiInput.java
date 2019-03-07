@@ -14,16 +14,17 @@ import android.content.Intent;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.ParcelUuid;
-import android.util.Log;
 import android.view.View;
+import android.widget.ArrayAdapter;
 import android.widget.AutoCompleteTextView;
 import android.widget.Button;
 import android.widget.EditText;
+import android.widget.Spinner;
 
 public class WifiInput extends Activity {
 
-    BluetoothSocket mmSocket;
-    BluetoothDevice mmDevice = null;
+    BluetoothSocket mSocket;
+    BluetoothDevice mDevice = null;
 
     final byte delimiter = 33;
     int readBufferPosition = 0;
@@ -33,11 +34,11 @@ public class WifiInput extends Activity {
     private EditText mPasswordView;
     private AutoCompleteTextView mWifiName;
     private Button mConfirmButton;
-    private EditText mDeviceName;
-    private EditText mDeviceAddress;
-    private EditText mDeviceUID;
-    private EditText mData;
-    private EditText mErrorText;
+    private Spinner eapSpinner;
+    private Spinner phase2Spinner;
+    private Spinner certSpinner;
+    private EditText mIdentity;
+    private EditText mAnonID;
 
     private ParcelUuid[] uid_list;
 
@@ -60,44 +61,16 @@ public class WifiInput extends Activity {
             {
                 if(device.getName().contains("smartbox")) //Note, you will need to change this to match the name of your device
                 {
-                    mmDevice = device;
-                    mDeviceAddress.setText(device.getAddress());
-                    mDeviceName.setText(device.getName());
-                    uid_list = mmDevice.getUuids();
-
-//                    boolean success = false;
-//                    int i = 0;
-
-//                    for (int i = 0; i < uid_list.length; i++) {
-//                        System.out.println(uid_list[i]);
-//                    }
+                    mDevice = device;
+                    uid_list = mDevice.getUuids();
 
                     try {
-                        mmSocket = mmDevice.createRfcommSocketToServiceRecord(uid_list[uid_list.length - 1].getUuid());
-                        mmSocket.connect();
+                        mSocket = mDevice.createRfcommSocketToServiceRecord(uid_list[uid_list.length - 1].getUuid());
+                        mSocket.connect();
                         uuid = uid_list[uid_list.length - 1].getUuid();
-                        mDeviceUID.setText(uuid + "");
                     } catch (IOException e) {
-                        mErrorText.setText("error with UID");
                     }
 
-//                    while (i < uid_list.length && !success) {
-//                        try {
-//                            mmSocket = mmDevice.createRfcommSocketToServiceRecord(uid_list[i].getUuid());
-//                            mmSocket.connect();
-//                            uuid = uid_list[0].getUuid();
-//                            success = true;
-//                        } catch (IOException e) {
-//                            mErrorText.setText("error with fetching UID");
-//                        }
-//                        i++;
-//                    }
-//
-//                    if(success == false) {
-//                        mErrorText.setText("end of for loop");
-//                    } else {
-//                        mDeviceUID.setText("" + uuid);
-//                    }
                     break;
                 }
             }
@@ -130,24 +103,22 @@ public class WifiInput extends Activity {
 //        mErrorText.setText("trying to send message: " + messangeToSend);
 
         try {
-//            mmSocket = mmDevice.createRfcommSocketToServiceRecord(uuid);
-            if (!mmSocket.isConnected()){
-                mmSocket.connect();
+//            mSocket = mmDevice.createRfcommSocketToServiceRecord(uuid);
+            if (!mSocket.isConnected()){
+                mSocket.connect();
             }
 
             String msg = messangeToSend;
             //msg += "\n";
             try {
-                OutputStream mmOutputStream = mmSocket.getOutputStream();
+                OutputStream mmOutputStream = mSocket.getOutputStream();
                 mmOutputStream.write(msg.getBytes());
-                return receiveData(mmSocket);
+                return receiveData(mSocket);
             } catch (IOException ioEx) {
-                mErrorText.setText("output stream issue");
             }
 
         } catch (IOException e) {
             // TODO Auto-generated catch block
-            mErrorText.setText("socket connection error");
         }
 
         return "no message received";
@@ -157,6 +128,20 @@ public class WifiInput extends Activity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+
+        Bundle b = this.getIntent().getExtras();
+        if (b != null)
+            mDevice = b.getParcelable("bluetooth_device");
+
+        String wifi_name = (String) getIntent().getSerializableExtra("wifi_name");
+        String security = (String) getIntent().getSerializableExtra("security");
+
+        try {
+            mSocket = mDevice.createRfcommSocketToServiceRecord(mDevice.getUuids()[mDevice.getUuids().length - 1].getUuid());
+        } catch (IOException e) {
+            System.out.println("socket issue");
+        }
+
         setContentView(R.layout.activity_wifi_input);
 
         final Handler handler = new Handler();
@@ -164,12 +149,46 @@ public class WifiInput extends Activity {
         mPasswordView = findViewById(R.id.password);
         mWifiName = findViewById(R.id.wifi);
         mConfirmButton = findViewById(R.id.wifi_send_button);
-        mDeviceName = findViewById(R.id.device_name);
-        mDeviceAddress = findViewById(R.id.device_address);
-        mDeviceUID = findViewById(R.id.device_uid);
-        mErrorText = findViewById(R.id.error_text);
 
-        bluetoothInit();
+        eapSpinner = findViewById(R.id.eap);
+        phase2Spinner = findViewById(R.id.phase2);
+        certSpinner = findViewById(R.id.ca_cert);
+
+        mIdentity = findViewById(R.id.identity);
+        mAnonID = findViewById(R.id.anonymous_id);
+
+        getActionBar().setTitle(wifi_name);
+
+        if (security.equals("None")) {
+            mPasswordView.setVisibility(View.GONE);
+        } else if (security.contains("802.1x") || security.contains("EAP")) {
+            eapSpinner.setVisibility(View.VISIBLE);
+            phase2Spinner.setVisibility(View.VISIBLE);
+            certSpinner.setVisibility(View.VISIBLE);
+            mIdentity.setVisibility(View.VISIBLE);
+            mAnonID.setVisibility(View.VISIBLE);
+
+            ArrayAdapter<CharSequence> eapAdapter = ArrayAdapter.createFromResource(this,
+                    R.array.eap_array, android.R.layout.simple_spinner_item);
+            // Specify the layout to use when the list of choices appears
+            eapAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+            // Apply the adapter to the spinner
+            eapSpinner.setAdapter(eapAdapter);
+
+            ArrayAdapter<CharSequence> p2Adapter = ArrayAdapter.createFromResource(this,
+                    R.array.phase2_authentication, android.R.layout.simple_spinner_item);
+            // Specify the layout to use when the list of choices appears
+            p2Adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+            // Apply the adapter to the spinner
+            phase2Spinner.setAdapter(p2Adapter);
+
+            ArrayAdapter<CharSequence> certAdapter = ArrayAdapter.createFromResource(this,
+                    R.array.CA_certificate, android.R.layout.simple_spinner_item);
+            // Specify the layout to use when the list of choices appears
+            certAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+            // Apply the adapter to the spinner
+            certSpinner.setAdapter(certAdapter);
+        }
 
         final class workerThread implements Runnable {
 
@@ -181,14 +200,13 @@ public class WifiInput extends Activity {
 
             public void run()
             {
-                mErrorText.setText(sendBluetoothMessage(btMsg, mData));
                 while(!Thread.currentThread().isInterrupted())
                 {
                     int bytesAvailable;
                     boolean workDone = false;
                     try {
                         final InputStream mmInputStream;
-                        mmInputStream = mmSocket.getInputStream();
+                        mmInputStream = mSocket.getInputStream();
                         bytesAvailable = mmInputStream.available();
                         if(bytesAvailable > 0)
                         {
@@ -211,7 +229,6 @@ public class WifiInput extends Activity {
                                     {
                                         public void run()
                                         {
-                                            mErrorText.setText(data);
                                         }
                                     });
 
@@ -224,13 +241,12 @@ public class WifiInput extends Activity {
                                 }
                             }
                             if (workDone == true){
-                                mmSocket.close();
+                                mSocket.close();
                                 break;
                             }
                         }
                     } catch (IOException e) {
                         // TODO Auto-generated catch block
-                        mErrorText.setText("Thread Issue");
                     }
                 }
             }
