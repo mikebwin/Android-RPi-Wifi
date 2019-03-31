@@ -72,8 +72,8 @@ public class ButtonUnlock extends Activity {
 
 //                    while (i < uid_list.length && !success) {
 //                        try {
-//                            mmSocket = mmDevice.createRfcommSocketToServiceRecord(uid_list[i].getUuid());
-//                            mmSocket.connect();
+//                            mSocket = mmDevice.createRfcommSocketToServiceRecord(uid_list[i].getUuid());
+//                            mSocket.connect();
 //                            uuid = uid_list[0].getUuid();
 //                            success = true;
 //                        } catch (IOException e) {
@@ -119,7 +119,7 @@ public class ButtonUnlock extends Activity {
 //        mLockStatus.setText("trying to send message: " + messangeToSend);
 
         try {
-//            mmSocket = mmDevice.createRfcommSocketToServiceRecord(uuid);
+//            mSocket = mmDevice.createRfcommSocketToServiceRecord(uuid);
             if (!mmSocket.isConnected()){
                 mmSocket.connect();
             }
