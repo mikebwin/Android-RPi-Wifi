@@ -66,16 +66,13 @@ while True:
                                                         password += " "
                                                 i += 1
                                         password = password.replace("s:", "")
+                                        new_cmd = "wpa_passphrase \"" + essid + "\" \"" + password + "\" | sudo tee -a /etc/wpa_supplicant/wpa_supplicant.conf > /dev/null"
+                                        out = subprocess.Popen(new_cmd, stdin=subprocess.PIPE, shell=True)
+                                        cmd = new_cmd.split()
+                                        out = subprocess.Popen("wpa_cli -i wlan0 reconfigure", stdin=subprocess.PIPE, shell=True)
+                                        out=None
+                                        stdout = "ok"
                                         
-                                        new_cmd = "wpa_passphrase \"" + essid + "\" \"" + password + "\""
-                                        print new_cmd
-                                        cmd = new_cmd.split()
-                                        out = subprocess.Popen(cmd,stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-
-                                        out = subprocess.Popen(["sudo", "tee", "-a", "/etc/wpa_supplicant/wpa_supplicant.conf"], stdin=out.stdout, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-                                        new_cmd = "wpa_cli -i wlan0 reconfigure"
-                                        cmd = new_cmd.split()
-                                        out = subprocess.Popen(cmd,stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
 
                                 #here we get what was printed to screen
                                 if out is not None:
