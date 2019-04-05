@@ -274,6 +274,7 @@ public class WifiListActivity extends Activity{
             if (BluetoothDevice.ACTION_FOUND.equals(action)) {
             }
             else if (BluetoothDevice.ACTION_ACL_CONNECTED.equals(action)) {
+                Toast.makeText(WifiListActivity.this, "Successfully Connected", Toast.LENGTH_LONG).show();
             }
             else if (BluetoothAdapter.ACTION_DISCOVERY_FINISHED.equals(action)) {
             }
