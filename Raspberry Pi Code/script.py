@@ -14,20 +14,20 @@ connect_confirm = False
 hardcoded_confirmation = "3025373"
 
 while True:
-        server_sock = BluetoothSocket(RFCOMM)
-        server_sock.bind(("", PORT_ANY))
-        server_sock.listen(1)
+	server_sock = BluetoothSocket(RFCOMM)
+	server_sock.bind(("", PORT_ANY))
+	server_sock.listen(1)
 
-        port = server_sock.getsockname()[1]
+	port = server_sock.getsockname()[1]
 
-        uuid = "94f39d29-7d6d-437d-973b-fba39e49d4ee"
+	uuid = "94f39d29-7d6d-437d-973b-fba39e49d4ee"
 
-        advertise_service(server_sock, "smartlock_pi_demo",
-                          service_id=uuid,
-                          service_classes=[uuid, SERIAL_PORT_CLASS],
-                          profiles=[SERIAL_PORT_PROFILE]
-                          )
-        
+	advertise_service(server_sock, "smartlock_pi_demo",
+	                  service_id=uuid,
+	                  service_classes=[uuid, SERIAL_PORT_CLASS],
+	                  profiles=[SERIAL_PORT_PROFILE]
+	                  )
+
 	print("Waiting for connection on RFCOMM channel %d" % port)
 
 	client_sock, client_info = server_sock.accept()
@@ -80,8 +80,8 @@ while True:
 					out = subprocess.Popen(new_cmd, stdin=subprocess.PIPE, shell=True)
 					cmd = new_cmd.split()
 					out = subprocess.Popen("wpa_cli -i wlan0 reconfigure", stdin=subprocess.PIPE, shell=True)
-					out = None
-					stdout = "ok"
+					new_cmd = "ping google -c 4 | grep received"
+					out = subprocess.Popen(new_cmd, stdin=subprocess.PIPE, shell=True)
 
 				# here we get what was printed to screen
 				if out is not None:
@@ -127,8 +127,14 @@ while True:
 					for key, value in str_dict.iteritems():
 						stdout = stdout + "\n" + key + "\n" + value
 
-					print stdout
-					client_sock.send(stdout)
+				if "iwconfig wlan0 essid" in data:
+					if "received" in stdout:
+						stdout = "connected"
+					else:
+						stdout = "not connected"
+
+				print stdout
+				client_sock.send(stdout)
 
 				if data == "quit":
 					print "quitting"
@@ -144,5 +150,5 @@ while True:
 			server_sock.close()
 			break
 	else:
-                client_sock.close()
+		client_sock.close()
 		server_sock.close()
