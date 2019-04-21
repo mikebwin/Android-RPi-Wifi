@@ -1,10 +1,12 @@
 package smartbox.bluetoothdemo;
 
 import android.app.Activity;
+import android.app.ProgressDialog;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothSocket;
 import android.content.Intent;
+import android.os.AsyncTask;
 import android.os.Bundle;
 import android.os.ParcelUuid;
 import android.support.v7.widget.LinearLayoutManager;
@@ -16,6 +18,7 @@ import android.widget.Toast;
 
 import java.io.IOException;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * Created by Yuan Zhang on 2/21/2019.
@@ -86,26 +89,16 @@ public class BluetoothActivity extends Activity{
         mRecyclerView.setAdapter(namesAdapter);
     }
 
-    public boolean connectBT(BluetoothDevice device) {
-        final BluetoothDevice mmDevice = device;
+    public void connectBT(String item) {
+        int num = Integer.parseInt(item);
+        final BluetoothDevice mmDevice = devicesArray[num];
         final ParcelUuid[] uid_list = mmDevice.getUuids();
-
-//        ProgressDialog progress=new ProgressDialog(this);
-//        progress.setMessage("Connecting...");
-//        progress.setProgressStyle(ProgressDialog.STYLE_SPINNER);
-//        progress.setIndeterminate(true);
-////                        progress.setProgress(0);
-//        progress.show();
 
         try {
             single.setmSocket(mmDevice.createRfcommSocketToServiceRecord(uid_list[uid_list.length - 1].getUuid()));
             single.getSocket().connect();
         } catch (IOException e) {
-            Toast.makeText(BluetoothActivity.this, "Bluetooth connection failed", Toast.LENGTH_LONG).show();
-            return false;
         }
-        return true;
-
 //        final AtomicBoolean condition = new AtomicBoolean(true);
 //
 //        final Thread t = new Thread() {
@@ -158,20 +151,9 @@ public class BluetoothActivity extends Activity{
 
                         System.out.println(item.getName());
 
-                        if(connectBT(item)) {
-                            Intent myIntent = new Intent(BluetoothActivity.this,
-                                    WifiListActivity.class);
-
-                            //had to close socket for it to work after passed through
-                            //though maybe a one time use global class thingy might be better for all bluetooth stuff
-//                            try {
-//                                mmSocket.close();
-//                            } catch (IOException e) {
-//                                e.printStackTrace();
-//                            }
-                            startActivity(myIntent);
-                        } else {
-                        }
+                        // will execute async thread task
+                        ConnectTask task = new ConnectTask();
+                        task.execute(position + "");
                     }
 
                     @Override public void onLongItemClick(View view, int position) {
@@ -181,5 +163,44 @@ public class BluetoothActivity extends Activity{
         );
 
     }
+
+    private class ConnectTask extends AsyncTask<String, Void, String> {
+        ProgressDialog progress;
+        @Override
+        // before execution, will start the spinner
+        protected void onPreExecute() {
+            // TODO Auto-generated method stub
+            progress = new ProgressDialog(BluetoothActivity.this);
+            progress.setMessage("Connecting...");
+            progress.setProgressStyle(ProgressDialog.STYLE_SPINNER);
+            progress.setIndeterminate(true);
+            progress.setProgress(0);
+            progress.show();
+            super.onPreExecute();
+        }
+
+        @Override
+        //call to connectBT which will try to connect
+        protected String doInBackground(String... params) {
+            connectBT(params[0]);
+
+            //Things should do in, until progress bar close
+            return null;
+
+        }
+
+        @Override
+        // once execution is done, progress bar disappears, and if successful, move to next screen, otherwise toast
+        protected void onPostExecute(String result) {
+            progress.dismiss();
+            if (single.getSocket().isConnected()) {
+                Intent myIntent = new Intent(BluetoothActivity.this,
+                        WifiListActivity.class);
+                startActivity(myIntent);
+            } else {
+                Toast.makeText(BluetoothActivity.this.getBaseContext(), "Bluetooth Connection Failed", Toast.LENGTH_LONG).show();
+            }
+        }
+    }// end async task
 
 }

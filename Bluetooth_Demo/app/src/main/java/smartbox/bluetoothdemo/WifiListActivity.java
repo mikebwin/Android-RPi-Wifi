@@ -1,15 +1,20 @@
 package smartbox.bluetoothdemo;
 
 import android.app.Activity;
+import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothSocket;
+import android.content.BroadcastReceiver;
+import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.os.Bundle;
 import android.os.Handler;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
 import android.view.View;
 import android.widget.Button;
+import android.widget.Toast;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -64,6 +69,7 @@ public class WifiListActivity extends Activity{
     private String sendBluetoothMessage(String messangeToSend) {
 //        UUID uuid = UUID.fromString("94f39d29-7d6d-437d-973b-fba39e49d4ee"); //Standard SerialPortService ID
 //        mErrorText.setText("trying to send message: " + messangeToSend);
+
 
         try {
 //            mSocket = mmDevice.createRfcommSocketToServiceRecord(uuid);
@@ -199,6 +205,7 @@ public class WifiListActivity extends Activity{
         mButton.setOnClickListener(new View.OnClickListener(){
             @Override
             public void onClick(View v) {
+
                 Thread thread = (new Thread(new workerThread("sudo iwlist wlan0 scanning")));
                 thread.start();
                 try {
@@ -249,6 +256,37 @@ public class WifiListActivity extends Activity{
                     }
                 })
         );
+
+        IntentFilter filter = new IntentFilter();
+        filter.addAction(BluetoothDevice.ACTION_ACL_CONNECTED);
+        filter.addAction(BluetoothDevice.ACTION_ACL_DISCONNECT_REQUESTED);
+        filter.addAction(BluetoothDevice.ACTION_ACL_DISCONNECTED);
+        this.registerReceiver(mReceiver, filter);
+
     }
+
+    private final BroadcastReceiver mReceiver = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            String action = intent.getAction();
+            BluetoothDevice device = intent.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE);
+
+            if (BluetoothDevice.ACTION_FOUND.equals(action)) {
+            }
+            else if (BluetoothDevice.ACTION_ACL_CONNECTED.equals(action)) {
+                Toast.makeText(WifiListActivity.this, "Successfully Connected", Toast.LENGTH_LONG).show();
+            }
+            else if (BluetoothAdapter.ACTION_DISCOVERY_FINISHED.equals(action)) {
+            }
+            else if (BluetoothDevice.ACTION_ACL_DISCONNECT_REQUESTED.equals(action)) {
+
+            }
+            else if (BluetoothDevice.ACTION_ACL_DISCONNECTED.equals(action)) {
+                Toast.makeText(WifiListActivity.this, "Bluetooth Disconnected", Toast.LENGTH_LONG).show();
+                Intent myItent = new Intent(WifiListActivity.this, BluetoothActivity.class);
+                startActivity(myItent);
+            }
+        }
+    };
 
 }
