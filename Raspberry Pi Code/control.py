@@ -207,7 +207,35 @@ class Controller:
             print("Cleaning")
             GPIO.cleanup()
 
-    def btPasswordConfirm(self, verification):
+    def checkValid(self, attempt):
+        for passcode in self.passcodes:
+            if passcode.isActive(time.time()):
+                if attempt == passcode.getPasscode():
+                    passcode.use()
+                    self.writePasscodes()
+                    self.uses.append(Usage(passcode, time.time()))
+                    self.writeUses()
+                    
+                    print("Unlock")
+                    self.unlock()
+                    #return True
+        self.uses.append(Usage(IncorrectPasscode(attempt), time.time()))
+        self.writeUses()
+        #return False
+
+class Usage:
+
+    def __init__(self, passcode, timestamp):
+        self.passcode = passcode
+        self.timestamp = timestamp
+
+    def getPasscode(self):
+        return self.passcode
+
+    def getTimestamp():
+        return self.timestamp
+
+def btPasswordConfirm(verification):
         GPIO.setmode(GPIO.BCM)
 
         MATRIX = [
@@ -242,11 +270,10 @@ class Controller:
                             num = str(MATRIX[i][j])
                             attempt += num
                             if num == '*':
-                                self.lock()
                                 attempt = ''
                             if num == '#' or num == 'A' or num == 'B' or num == 'C' or num == 'D':
                                 attempt = ''
-                            if len(attempt) == self.passcodeLength:
+                            if len(attempt) == len(verification):
                                 return verification == attempt
 
                         if time.time() - lastAttempt >= 20:
@@ -256,34 +283,6 @@ class Controller:
         except KeyboardInterrupt:
             print("Cleaning")
             GPIO.cleanup()
-
-    def checkValid(self, attempt):
-        for passcode in self.passcodes:
-            if passcode.isActive(time.time()):
-                if attempt == passcode.getPasscode():
-                    passcode.use()
-                    self.writePasscodes()
-                    self.uses.append(Usage(passcode, time.time()))
-                    self.writeUses()
-                    
-                    print("Unlock")
-                    self.unlock()
-                    #return True
-        self.uses.append(Usage(IncorrectPasscode(attempt), time.time()))
-        self.writeUses()
-        #return False
-
-class Usage:
-
-    def __init__(self, passcode, timestamp):
-        self.passcode = passcode
-        self.timestamp = timestamp
-
-    def getPasscode(self):
-        return self.passcode
-
-    def getTimestamp():
-        return self.timestamp
 
 if __name__ == "__main__":
     Controller().waitForPasscode()

@@ -4,7 +4,7 @@ import time
 from bluetooth import *
 import subprocess
 
-from control import Controller
+from control import btPasswordConfirm
 
 os.system("sudo hciconfig hci0 piscan")
 os.system("sudo hciconfig hci0 name smartbox_pi_demo")
@@ -33,7 +33,7 @@ while True:
 
     client_sock, client_info = server_sock.accept()
 
-    confirmation = Controller.btPasswordConfirm(verification=hardcoded_confirmation)
+    confirmation = btPasswordConfirm(hardcoded_confirmation)
 
     if confirmation:
         print("Accepted connection from ", client_info)
