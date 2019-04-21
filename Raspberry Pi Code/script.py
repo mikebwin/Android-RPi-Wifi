@@ -49,6 +49,7 @@ while True:
                                 # this will have to change - with whatever android sends for essid + password
                                 if "iwconfig wlan0 essid" in data:
                                         print "WIFI INPUT"
+                                        print data
                                         # while loops and key index in case ESSID and password are multi words
                                         key_index = cmd.index("key")
                                         i = 3
@@ -88,19 +89,23 @@ while True:
                                 # if it was a call to get the SSID and security, we'll parse through
                                 # and get it into a format we want on the Android app
                                 stdout1 = ""
+                                prev = False
                                 if data == "sudo iwlist wlan0 scanning":
                                     #go through and delete all the spaces before ESSID and authentication
                                     for line in stdout.splitlines():
+                                        print line
                                         essid_index = line.find("ESSID")
                                         auth_index = line.find("Authentication")
-                                        if essid_index < 0:
+                                        if essid_index < 0 and prev:
                                                 stdout1 = stdout1 + line[auth_index:] + "\n"
                                         else:
+                                                prev = True
                                                 stdout1 = stdout1 + line[essid_index:] + "\n"
+                                        
                                     stdout = stdout1
                                     stdout = stdout.replace("ESSID:", "E:")
                                     stdout = stdout.replace("\"", "")
-                                    stdout = stdout.replace("Authentication Suites (1) :", "A:")                                    
+                                    stdout = stdout.replace("Authentication Suites (1) :", "A:")            
                                     str_list = stdout.split("\n")
                                     str_dict = dict()
                                     index = 0
